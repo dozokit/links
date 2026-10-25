@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dozokit-links",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  // Lets this Worker send scans to a Dozokit Analytics Worker in the same Cloudflare account.
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  // Every address goes to the Worker first: short links live at the top level, the admin page under /admin.
+  "assets": { "binding": "ASSETS", "run_worker_first": true },
+  // No database_id: the Deploy button creates the database, or `wrangler d1 create` adds it here.
+  "d1_databases": [{ "binding": "DB", "database_name": "dozokit-links", "migrations_dir": "migrations" }],
+  // Sign-in attempts per address. namespace_id only has to be unique in your Cloudflare account: change it if it clashes.
+  "ratelimits": [{ "name": "LOGIN_LIMIT", "namespace_id": "7311", "simple": { "limit": 5, "period": 60 } }],
+  "observability": { "enabled": true }
+}
