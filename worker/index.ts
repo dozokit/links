@@ -49,7 +49,13 @@ export default {
     }
 
     // The admin page is a single page app: every address under /admin gets its index.html.
-    if (path === "/admin" || path.startsWith("/admin/")) return env.ASSETS.fetch(new URL("/", url));
+    if (path === "/admin" || path.startsWith("/admin/")) {
+      // The sign-in page can't be shown inside another site's frame.
+      const html = await env.ASSETS.fetch(new URL("/", url));
+      return new Response(html.body, {
+        headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": "frame-ancestors 'none'", "x-frame-options": "DENY" },
+      });
+    }
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n", { headers: { "content-type": "text/plain" } });
 
     if (path === "/") {
