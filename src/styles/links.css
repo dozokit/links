@@ -35,5 +35,7 @@
 .days-link, .key--link { background: var(--color-accent-2); }
 .key { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; border-radius: 2px; vertical-align: -1px; }
 
-.settings-h2 { font-size: var(--text-xl); margin: var(--space-xl) 0 var(--space-md); }
-.settings-save { margin-top: var(--space-lg); }
+
+.field-stack { display: grid; gap: var(--space-sm); max-width: 36rem; }
+.field-stack .field { flex: none; }
+.field-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); }

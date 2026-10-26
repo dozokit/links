@@ -23,7 +23,7 @@ function connection(last: Config["analytics_last"]) {
 export function Settings({ passwordRequired, version }: { passwordRequired: boolean; version?: string }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "testing">("idle");
+  const [state, setState] = useState<"idle" | "testing" | `${"saving" | "saved" | "failed"}-${"home" | "analytics"}`>("idle");
 
   useEffect(() => {
     api<Config>("/api/settings").then(setCfg, (e: Error) => setError(e.message));
@@ -34,25 +34,56 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
   const edit = (k: keyof Config) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setCfg({ ...cfg, [k]: e.target.value });
     setState("idle");
+    setError(null);
   };
+  // Both forms save the whole config; `state` says which one the message belongs to.
+  const save = (part: "home" | "analytics") => async (e: React.FormEvent) => {
+    e.preventDefault();
+    setState(`saving-${part}`);
+    setError(null);
+    try {
+      setCfg(await api<Config>("/api/settings", { method: "PUT", body: JSON.stringify(cfg) }));
+      setState(`saved-${part}`);
+    } catch (err) {
+      setError((err as Error).message);
+      setState(`failed-${part}`);
+    }
+  };
+  const homeError = state === "failed-home" ? error : null;
+  const analyticsError = state === "failed-analytics" || state === "idle" ? error : null;
 
   return (
     <div className="settings">
-      <form
-        className="page-section"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setState("saving");
-          setError(null);
-          try {
-            setCfg(await api<Config>("/api/settings", { method: "PUT", body: JSON.stringify(cfg) }));
-            setState("saved");
-          } catch (err) {
-            setError((err as Error).message);
-            setState("idle");
-          }
-        }}
-      >
+      <section className="page-section">
+        <h2>Your address</h2>
+        <p className="lead">
+          Your short links start with <code>{location.host}/</code>. To use your own domain instead, like <code>go.example.com</code>: in Cloudflare, open this Worker, then
+          Settings → Domains &amp; Routes → Add → Custom domain. The domain has to be on Cloudflare. Open this page at the new address and every link and QR code shows it.
+        </p>
+      </section>
+
+      <form className="page-section" onSubmit={save("home")}>
+        <h2>Home page</h2>
+        <p className="lead">
+          Someone who opens <code>{location.host}/</code> with no name after it goes here. Leave it empty to show a blank page.
+        </p>
+        <div className="field-stack">
+          <label className="field">
+            <span>Home page address (optional)</span>
+            <input type="text" inputMode="url" spellCheck={false} placeholder="https://example.com" value={cfg.home_url} onChange={edit("home_url")} aria-describedby="home-help" />
+          </label>
+        </div>
+        <div className="field-actions">
+          <button type="submit" className="btn btn--ink" disabled={state === "saving-home"}>
+            {state === "saving-home" ? "Saving" : "Save"}
+          </button>
+        </div>
+        <p id="home-help" className={homeError ? "help help--error" : "help"} role="status">
+          {homeError ?? (state === "saved-home" ? "Saved." : "")}
+        </p>
+      </form>
+
+      <form className="page-section" onSubmit={save("analytics")}>
         <h2>Count scans in Dozokit Analytics</h2>
         <p className="lead">
           Every scan and click is counted here already. If you run{" "}
@@ -62,28 +93,20 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
           , each one also shows there as a visit to <code>{location.host}/name</code> and a goal: <code>qr_scan</code> or <code>link_click</code>, with the link's name.
           There, add <code>{location.hostname}</code> as a website (or use the one whose domain it belongs to), then copy its site id here.
         </p>
-        <div className="field-row">
+        <div className="field-stack">
           <label className="field">
             <span>Dozokit Analytics address</span>
             <input type="text" inputMode="url" spellCheck={false} placeholder="https://stats.example.com" value={cfg.analytics_url} onChange={edit("analytics_url")} />
+            <span className="help">Leave it empty to count only here.</span>
           </label>
           <label className="field">
             <span>Site id</span>
             <input type="text" spellCheck={false} placeholder="data-site value" value={cfg.analytics_site} onChange={edit("analytics_site")} />
           </label>
         </div>
-
-        <h2 className="settings-h2">Home page</h2>
-        <div className="field-row">
-          <label className="field field--wide">
-            <span>Where {location.host}/ leads (optional)</span>
-            <input type="text" inputMode="url" spellCheck={false} placeholder="https://example.com" value={cfg.home_url} onChange={edit("home_url")} />
-          </label>
-        </div>
-
-        <div className="field-row settings-save">
-          <button type="submit" className="btn btn--ink" disabled={state === "saving"}>
-            {state === "saving" ? "Saving" : "Save"}
+        <div className="field-actions">
+          <button type="submit" className="btn btn--ink" disabled={state === "saving-analytics"}>
+            {state === "saving-analytics" ? "Saving" : "Save"}
           </button>
           {cfg.analytics_url && cfg.analytics_site && (
             <button
@@ -105,8 +128,8 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
             </button>
           )}
         </div>
-        <p className={error || (status && !status.ok) ? "help help--error" : "help"} role="status">
-          {error ?? status?.text ?? (state === "saved" ? "Saved." : "Leave the address empty to count only here.")}
+        <p className={analyticsError || (status && !status.ok) ? "help help--error" : "help"} role="status">
+          {analyticsError ?? (state === "saved-analytics" ? "Saved." : status?.text ?? "")}
         </p>
       </form>
 

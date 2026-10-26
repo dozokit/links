@@ -44,8 +44,8 @@ function NewLink({ onAdded }: { onAdded: (l: Link) => void }) {
       }}
     >
       <h2>New short link</h2>
-      <div className="field-row">
-        <label className="field field--wide">
+      <div className="field-stack">
+        <label className="field">
           <span>Where it leads</span>
           <input name="url" type="text" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://example.com/menu" required value={url} onChange={(e) => setUrl(e.target.value)} aria-invalid={Boolean(error)} aria-describedby="new-help" />
         </label>
@@ -60,6 +60,8 @@ function NewLink({ onAdded }: { onAdded: (l: Link) => void }) {
           <span>Note (optional)</span>
           <input name="note" type="text" autoComplete="off" placeholder="Poster at the front door" value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
+      </div>
+      <div className="field-actions">
         <button type="submit" className="btn btn--ink" disabled={busy}>
           {busy ? "Creating" : "Create link"}
         </button>
