@@ -2,6 +2,11 @@
 
 How to update your copy: [dozokit.com/links/guide#updating](https://dozokit.com/links/guide#updating).
 
+## 1.0.3 – 2026-10-26
+
+- The update button installs only the latest release, and only once it checks the release is signed with Dozokit's release key, which lives on one computer. A release that isn't signed with it is refused and nothing changes. Before, it took the newest files on GitHub as they were.
+- Settings → Updates has Replace it, for copies that added the update button before 1.0.3: press it once to get the signed one.
+
 ## 1.0.2 – 2026-10-26
 
 - Your own domain on links and QR codes, even when it isn't on Cloudflare: forward it here at your registrar (path and query kept), then type it in Settings → Your address. Saving checks the forwarding first.
