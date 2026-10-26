@@ -2,6 +2,11 @@
 
 How to update your copy: [dozokit.com/links/guide#updating](https://dozokit.com/links/guide#updating).
 
+## 1.0.2 – 2026-10-26
+
+- Your own domain on links and QR codes, even when it isn't on Cloudflare: forward it here at your registrar (path and query kept), then type it in Settings → Your address. Saving checks the forwarding first.
+- Settings → Updates adds the update button to your GitHub copy in one click. Cloudflare's Deploy button leaves it out, so copies made with the button need this once.
+
 ## 1.0.1 – 2026-10-26
 
 - Admin: the new-link fields sit one below the other.

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { ChangePassword } from "./Password";
+import { TurnOnUpdates } from "./TurnOnUpdates";
 
 interface Config {
   home_url: string;
+  link_address: string;
   analytics_url: string;
   analytics_site: string;
   analytics_last: { status: string; at: number } | null;
@@ -23,7 +25,7 @@ function connection(last: Config["analytics_last"]) {
 export function Settings({ passwordRequired, version }: { passwordRequired: boolean; version?: string }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<"idle" | "testing" | `${"saving" | "saved" | "failed"}-${"home" | "analytics"}`>("idle");
+  const [state, setState] = useState<"idle" | "testing" | `${"saving" | "saved" | "failed"}-${"address" | "home" | "analytics"}`>("idle");
 
   useEffect(() => {
     api<Config>("/api/settings").then(setCfg, (e: Error) => setError(e.message));
@@ -54,13 +56,56 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
 
   return (
     <div className="settings">
-      <section className="page-section">
+      <form
+        className="page-section"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setState("saving-address");
+          setError(null);
+          try {
+            setCfg(await api<Config>("/api/settings/address", { method: "PUT", body: JSON.stringify({ link_address: cfg.link_address }) }));
+            setState("saved-address");
+          } catch (err) {
+            setError((err as Error).message);
+            setState("failed-address");
+          }
+        }}
+      >
         <h2>Your address</h2>
         <p className="lead">
-          Your short links start with <code>{location.host}/</code>. To use your own domain instead, like <code>go.example.com</code>: in Cloudflare, open this Worker, then
-          Settings → Domains &amp; Routes → Add → Custom domain. The domain has to be on Cloudflare. Open this page at the new address and every link and QR code shows it.
+          Links and QR codes use <code>{cfg.link_address || location.host}/</code>. To print your own domain on them instead, like <code>go.example.com</code>, set it up one of
+          two ways, then type it here:
         </p>
-      </section>
+        <ol className="lead">
+          <li>
+            Domain on Cloudflare: open this Worker, then Settings → Domains &amp; Routes → Add → Custom domain.
+          </li>
+          <li>
+            Domain anywhere else: at your registrar, forward <code>go.example.com</code> to <code>https://{location.host}</code>, keeping the path and the query (often called
+            "forward path" or "keep URL path").
+          </li>
+        </ol>
+        <div className="field-stack">
+          <label className="field">
+            <span>Address on your links (optional)</span>
+            <input type="text" inputMode="url" spellCheck={false} placeholder="go.example.com" value={cfg.link_address} onChange={edit("link_address")} aria-describedby="address-help" />
+          </label>
+        </div>
+        <div className="field-actions">
+          <button type="submit" className="btn btn--ink" disabled={state === "saving-address"}>
+            {state === "saving-address" ? "Checking" : "Check and save"}
+          </button>
+        </div>
+        <p id="address-help" className={state === "failed-address" ? "help help--error" : "help"} role="status">
+          {state === "failed-address"
+            ? error
+            : state === "saved-address"
+              ? cfg.link_address
+                ? `Saved: it reaches this page with the path and query kept. New links and QR codes use ${cfg.link_address}; codes already printed keep working.`
+                : "Saved: links use this Worker's address."
+              : "Saving sends one test request through the address first. Leave it empty to use this Worker's address."}
+        </p>
+      </form>
 
       <form className="page-section" onSubmit={save("home")}>
         <h2>Home page</h2>
@@ -138,6 +183,11 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
           <ChangePassword />
         </section>
       )}
+
+      <section className="page-section">
+        <h2>Updates</h2>
+        <TurnOnUpdates />
+      </section>
 
       <section className="page-section">
         <h2>Version</h2>

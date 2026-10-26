@@ -5,7 +5,7 @@ export interface Link {
   url: string;
 }
 
-export type Settings = Partial<Record<"home_url" | "analytics_url" | "analytics_site" | "analytics_last", string>>;
+export type Settings = Partial<Record<"home_url" | "link_address" | "analytics_url" | "analytics_site" | "analytics_last", string>>;
 
 // Each Cloudflare location keeps what it read for half a minute, so a scan rarely waits on
 // the database. An edit therefore reaches every location within that half minute.

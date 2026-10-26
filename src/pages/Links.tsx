@@ -13,7 +13,9 @@ export interface Link {
   last30: number;
 }
 
-const short = (slug: string) => `${location.origin}/${slug}`;
+// The address on links and QR codes: the one saved in Settings, or this page's own.
+let host = location.host;
+const short = (slug: string) => `${host === location.host ? location.origin : `https://${host}`}/${slug}`;
 // What the QR code holds: the short link plus ?qr, which is how a scan is told from a click.
 const coded = (slug: string) => `${short(slug)}?qr`;
 const n = (v: number) => v.toLocaleString("en");
@@ -52,7 +54,7 @@ function NewLink({ onAdded }: { onAdded: (l: Link) => void }) {
         <label className="field">
           <span>Name (optional)</span>
           <span className="prefixed">
-            <span className="prefix">{location.host}/</span>
+            <span className="prefix">{host}/</span>
             <input name="slug" type="text" autoComplete="off" spellCheck={false} placeholder="menu" value={slug} onChange={(e) => setSlug(e.target.value)} />
           </span>
         </label>
@@ -125,7 +127,7 @@ function Row({ link, onChange, onDelete }: { link: Link; onChange: (l: Link) => 
         <div className="link-text">
           <p className="link-short">
             <a href={short(link.slug)} target="_blank" rel="noopener" className="path">
-              {location.host}/{link.slug}
+              {host}/{link.slug}
             </a>
             <button
               type="button"
@@ -244,17 +246,23 @@ export function Links() {
   const [links, setLinks] = useState<Link[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    api<Link[]>("/api/links").then(setLinks, (e: Error) => setError(e.message));
+    Promise.all([api<Link[]>("/api/links"), api<{ link_address: string }>("/api/settings")]).then(
+      ([ls, cfg]) => {
+        host = cfg.link_address || location.host;
+        setLinks(ls);
+      },
+      (e: Error) => setError(e.message),
+    );
   }, []);
+  if (!links) return <p className={error ? "help help--error" : "help"}>{error ?? "Loading…"}</p>;
 
   return (
     <div className="links">
-      <NewLink onAdded={(l) => setLinks((ls) => [l, ...(ls ?? [])])} />
+      <NewLink onAdded={(l) => setLinks((ls) => [l, ...ls!])} />
       <section className="page-section">
         <h2>Your links</h2>
-        {error && <p className="help help--error">{error}</p>}
-        {links && !links.length && <p className="muted">No link yet. Create one above: it gets a short address and a QR code to print.</p>}
-        {links && links.length > 0 && (
+        {!links.length && <p className="muted">No link yet. Create one above: it gets a short address and a QR code to print.</p>}
+        {links.length > 0 && (
           <ul className="link-list">
             {links.map((l) => (
               <Row

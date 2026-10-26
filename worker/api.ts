@@ -82,7 +82,7 @@ async function days(env: Env, slug: string) {
 
 async function getSettings(env: Env) {
   const s = await settings(env);
-  return json({ home_url: s.home_url ?? "", analytics_url: s.analytics_url ?? "", analytics_site: s.analytics_site ?? "", analytics_last: s.analytics_last ? JSON.parse(s.analytics_last) : null });
+  return json({ home_url: s.home_url ?? "", link_address: s.link_address ?? "", analytics_url: s.analytics_url ?? "", analytics_site: s.analytics_site ?? "", analytics_last: s.analytics_last ? JSON.parse(s.analytics_last) : null });
 }
 
 async function putSettings(req: Request, env: Env) {
@@ -110,6 +110,57 @@ async function putSettings(req: Request, env: Env) {
   return getSettings(env);
 }
 
+// The address printed on links and QR codes, when it isn't this Worker's own: a Custom domain
+// on Cloudflare, or a domain elsewhere that forwards here keeping the path and query. Saved
+// only once a test request has gone through it and come back to this Worker intact.
+async function putAddress(req: Request, env: Env, url: URL) {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const raw = typeof body.link_address === "string" ? body.link_address.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "") : "";
+  const del = () => env.DB.prepare("delete from settings where key = 'link_address'").run();
+  if (!raw || raw === url.host) {
+    await del();
+    forget();
+    return getSettings(env);
+  }
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(raw)) return json({ error: "Type only the address, such as go.example.com: no path after it." }, 400);
+  const problem = await followsHere(raw, url.host);
+  if (problem) return json({ error: problem }, 400);
+  await env.DB.prepare("insert or replace into settings (key, value) values ('link_address', ?)").bind(raw).run();
+  forget();
+  return getSettings(env);
+}
+
+// Follows the redirects from the address one at a time. The hop that reaches this Worker's own
+// address isn't fetched (a Worker can't reliably fetch itself): it's enough that it arrives with
+// the test path and ?qr intact. A Custom domain answers the test path itself.
+async function followsHere(address: string, self: string): Promise<string | null> {
+  const nonce = crypto.randomUUID().slice(0, 8);
+  let at = new URL(`https://${address}${CHECK}?qr&n=${nonce}`);
+  for (let hop = 0; hop < 5; hop++) {
+    if (at.host === self) {
+      if (at.pathname !== CHECK) return `${address} leads here but drops the path: /menu would open your home page. At your registrar, turn on forwarding with the path kept.`;
+      if (!at.searchParams.has("qr") || at.searchParams.get("n") !== nonce) return `${address} leads here but drops what follows ?, so QR scans would count as clicks. At your registrar, turn on forwarding with the query kept.`;
+      return null;
+    }
+    let res: Response;
+    try {
+      res = await fetch(at, { redirect: "manual", signal: AbortSignal.timeout(5000) });
+    } catch {
+      return `No answer from ${address}. Check its DNS or forwarding is set up; a new one can take a few minutes.`;
+    }
+    const next = res.headers.get("location");
+    if (res.status >= 300 && res.status < 400 && next) {
+      at = new URL(next, at);
+      continue;
+    }
+    if (res.headers.get("x-dozokit-links") === nonce) return null;
+    return `${address} doesn't lead to this page. Point it at ${self}, keeping the path and query.`;
+  }
+  return `${address} redirects too many times.`;
+}
+
+export const CHECK = "/.well-known/dozokit-links";
+
 // Asks Dozokit Analytics whether it knows the site, without recording anything: a "ping"
 // for a visit that doesn't exist changes no row.
 async function testAnalytics(env: Env) {
@@ -133,7 +184,7 @@ async function testAnalytics(env: Env) {
 }
 
 // This copy's release. Raise it with each tag on github.com/dozokit/links (v1.0.0) and its CHANGELOG.md entry.
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 
 // The newest release, when it is newer than this copy. GitHub is asked at most once a day
 // per Cloudflare location (an hour after a failure); offline or rate-limited means no answer.
@@ -165,6 +216,7 @@ const ROUTES: Record<string, Handler> = {
   "GET /settings": (_r, env) => getSettings(env),
   "PUT /settings": (req, env) => putSettings(req, env),
   "POST /settings/test": (_r, env) => testAnalytics(env),
+  "PUT /settings/address": (req, env) => putAddress(req, env, new URL(req.url)),
   "GET /version": () => version(),
 };
 

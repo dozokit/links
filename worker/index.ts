@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, CHECK } from "./api";
 import { changePassword, login, logout, passwordRequired, setupNeeded, signedIn } from "./auth";
 import { count } from "./count";
 import { findLink, settings } from "./store";
@@ -56,6 +56,8 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": "frame-ancestors 'none'", "x-frame-options": "DENY" },
       });
     }
+    // The test request Settings sends through a new link address: echoes its nonce.
+    if (path === CHECK) return new Response("Dozokit Links", { headers: { "x-dozokit-links": url.searchParams.get("n") ?? "", "cache-control": "no-store" } });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n", { headers: { "content-type": "text/plain" } });
 
     if (path === "/") {
