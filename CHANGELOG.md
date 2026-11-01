@@ -2,6 +2,10 @@
 
 How to update your copy: [dozokit.com/links/guide#updating](https://dozokit.com/links/guide#updating).
 
+## 1.1.0 – 2026-11-01
+
+- The admin page checks for new versions with Dozokit instead of GitHub. It sends only this copy's version number and a random number made for it, nothing about your links or the people who open them. Settings → Updates → Check for new versions turns it off: nothing is sent then, and the admin page no longer tells you about new versions.
+
 ## 1.0.3 – 2026-10-26
 
 - The update button installs only the latest release, and only once it checks the release is signed with Dozokit's release key, which lives on one computer. A release that isn't signed with it is refused and nothing changes. Before, it took the newest files on GitHub as they were.

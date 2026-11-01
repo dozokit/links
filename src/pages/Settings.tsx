@@ -22,6 +22,42 @@ function connection(last: Config["analytics_last"]) {
   return { ok: false, text: `Dozokit Analytics answered ${last.status} (${when}).` };
 }
 
+// On by default: once a day the admin page asks dozokit.com whether a newer version is out.
+function ShareCount() {
+  const [on, setOn] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    api<{ share: boolean }>("/api/version").then((d) => setOn(d.share), () => setOn(true));
+  }, []);
+  return (
+    <div className="share-count">
+      <label>
+        <input
+          type="checkbox"
+          checked={on ?? true}
+          disabled={on === null}
+          onChange={async (e) => {
+            const next = e.target.checked;
+            setOn(next);
+            setError(null);
+            try {
+              await api("/api/version", { method: "PUT", body: JSON.stringify({ share: next }) });
+            } catch (err) {
+              setOn(!next);
+              setError((err as Error).message);
+            }
+          }}
+        />{" "}
+        Check for new versions
+      </label>
+      <p className={error ? "help help--error" : "help"} role="status">
+        {error ??
+          "Once a day, this admin page asks Dozokit whether a new version is out. It sends only its version number and a random number made for this copy, nothing about your links or the people who open them. Turned off, nothing is sent and you won't hear about new versions."}
+      </p>
+    </div>
+  );
+}
+
 export function Settings({ passwordRequired, version }: { passwordRequired: boolean; version?: string }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +223,7 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
       <section className="page-section">
         <h2>Updates</h2>
         <TurnOnUpdates />
+        <ShareCount />
       </section>
 
       <section className="page-section">

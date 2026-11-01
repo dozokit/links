@@ -67,7 +67,7 @@ Without a `PASSWORD` secret, or with one under 12 characters, the deployed admin
 
 ## Third parties
 
-Short links talk to nobody but your Worker (and your Dozokit Analytics, if you connect it). The admin page loads its General Sans font from Fontshare. Once a day the Worker asks GitHub for the latest release, to tell you when a newer version exists.
+Short links talk to nobody but your Worker (and your Dozokit Analytics, if you connect it). The admin page loads its General Sans font from Fontshare. Once a day the Worker asks dozokit.com for the latest release, to tell you when a newer version exists; it sends its version number and a random id made for this copy, nothing else (Settings → Updates turns this off).
 
 ## License
 
