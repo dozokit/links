@@ -231,6 +231,11 @@ export function Settings({ passwordRequired, version }: { passwordRequired: bool
         <p className="help">
           Dozokit Links {version}. How to update: <a href="https://dozokit.com/links/guide#updating">dozokit.com/links/guide</a>.
         </p>
+        <p className="help">
+          <a href="https://ideas.dozokit.com/b/links" target="_blank" rel="noopener">
+            Send feedback on Dozokit Links ↗
+          </a>
+        </p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();

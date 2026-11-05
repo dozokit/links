@@ -2,6 +2,11 @@
 
 How to update your copy: [dozokit.com/links/guide#updating](https://dozokit.com/links/guide#updating).
 
+## 1.1.1 – 2026-11-05
+
+- A password changed in Settings is checked within the free plan's 10 ms of computing per request. Your next sign-in updates it on its own and signs your other devices out once.
+- Settings → Send feedback on Dozokit Links opens Dozokit's own board, to tell us what to add or fix.
+
 ## 1.1.0 – 2026-11-01
 
 - The admin page checks for new versions with Dozokit instead of GitHub. It sends only this copy's version number and a random number made for it, nothing about your links or the people who open them. Settings → Updates → Check for new versions turns it off: nothing is sent then, and the admin page no longer tells you about new versions.
